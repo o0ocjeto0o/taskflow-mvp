@@ -23,43 +23,45 @@ document.addEventListener('DOMContentLoaded', () => {
   const deleteModal = document.getElementById('deleteModal');
   let taskToDeleteId = null;
   let draggedTaskId = null;
+  let cachedProjects = [];
+  let cachedTasks = [];
 
-  // Nạp danh sách Project vào bộ lọc và Modal tạo Task
-  function populateProjectDropdowns() {
-    const projects = StorageService.getProjectsByUser(currentUser.id);
-    const params = new URLSearchParams(window.location.search);
-    const preselectedProjectId = params.get('projectId') || 'ALL';
+  async function populateProjectDropdowns() {
+    try {
+      cachedProjects = await ApiService.getProjects();
+      const params = new URLSearchParams(window.location.search);
+      const preselectedProjectId = params.get('projectId') || 'ALL';
 
-    projectFilter.innerHTML = `<option value="ALL">Tất cả dự án (${projects.length})</option>` +
-      projects.map(p => `<option value="${p.id}">${UIHelper.escapeHTML(p.name)}</option>`).join('');
+      projectFilter.innerHTML = `<option value="ALL">Tất cả dự án (${cachedProjects.length})</option>` +
+        cachedProjects.map(p => `<option value="${p.id}">${UIHelper.escapeHTML(p.name)}</option>`).join('');
 
-    if (projects.some(p => String(p.id) === preselectedProjectId)) {
-      projectFilter.value = preselectedProjectId;
+      if (cachedProjects.some(p => String(p.id) === preselectedProjectId)) {
+        projectFilter.value = preselectedProjectId;
+      }
+
+      taskProjectSelect.innerHTML = cachedProjects.map(p =>
+        `<option value="${p.id}">${UIHelper.escapeHTML(p.name)}</option>`
+      ).join('');
+    } catch (err) {
+      UIHelper.showToast(err.message, 'error');
     }
-
-    taskProjectSelect.innerHTML = projects.map(p =>
-      `<option value="${p.id}">${UIHelper.escapeHTML(p.name)}</option>`
-    ).join('');
   }
 
   function openTaskModal(task = null) {
-    const projects = StorageService.getProjectsByUser(currentUser.id);
-    if (projects.length === 0) {
+    if (cachedProjects.length === 0) {
       UIHelper.showToast('Bạn cần tạo ít nhất 1 dự án trước khi thêm công việc!', 'error');
       return;
     }
-
-    populateProjectDropdowns();
 
     if (task) {
       taskModalTitle.textContent = 'Chỉnh sửa công việc';
       taskIdInput.value = task.id;
       taskProjectSelect.value = task.project_id;
       taskTitleInput.value = task.title;
-      taskDescInput.value = task.description;
+      taskDescInput.value = task.description || '';
       taskPriorityInput.value = task.priority;
       taskStatusInput.value = task.status;
-      taskDueDateInput.value = task.due_date;
+      taskDueDateInput.value = task.due_date || '';
     } else {
       taskModalTitle.textContent = 'Thêm công việc mới';
       taskForm.reset();
@@ -76,80 +78,81 @@ document.addEventListener('DOMContentLoaded', () => {
     taskModal.classList.remove('active');
   }
 
-  function renderKanbanBoard() {
-    const projects = StorageService.getProjectsByUser(currentUser.id);
-    const projectMap = {};
-    projects.forEach(p => { projectMap[p.id] = p.name; });
+  async function renderKanbanBoard() {
+    try {
+      const selectedProject = projectFilter.value;
+      const keyword = searchInput.value.trim();
 
-    const allTasks = StorageService.getTasksByUser(currentUser.id);
-    const selectedProject = projectFilter.value;
-    const keyword = searchInput.value.trim().toLowerCase();
+      const tasks = await ApiService.getTasks({
+        projectId: selectedProject,
+        search: keyword
+      });
+      cachedTasks = tasks;
 
-    const filteredTasks = allTasks.filter(t => {
-      const matchProject = selectedProject === 'ALL' || String(t.project_id) === selectedProject;
-      const matchKeyword = t.title.toLowerCase().includes(keyword) || t.description.toLowerCase().includes(keyword);
-      return matchProject && matchKeyword;
-    });
+      STATUS_ORDER.forEach(status => {
+        const colContainer = document.getElementById(`col-${status}`);
+        const countBadge = document.getElementById(`count-${status}`);
+        const colTasks = tasks.filter(t => t.status === status);
 
-    STATUS_ORDER.forEach(status => {
-      const colContainer = document.getElementById(`col-${status}`);
-      const countBadge = document.getElementById(`count-${status}`);
-      const colTasks = filteredTasks.filter(t => t.status === status);
+        countBadge.textContent = colTasks.length;
 
-      countBadge.textContent = colTasks.length;
+        if (colTasks.length === 0) {
+          colContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px 8px;">Chưa có thẻ nào</div>`;
+          return;
+        }
 
-      if (colTasks.length === 0) {
-        colContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px 8px;">Chưa có thẻ nào</div>`;
-        return;
-      }
+        const currentIndex = STATUS_ORDER.indexOf(status);
+        const prevStatus = currentIndex > 0 ? STATUS_ORDER[currentIndex - 1] : null;
+        const nextStatus = currentIndex < STATUS_ORDER.length - 1 ? STATUS_ORDER[currentIndex + 1] : null;
 
-      const currentIndex = STATUS_ORDER.indexOf(status);
-      const prevStatus = currentIndex > 0 ? STATUS_ORDER[currentIndex - 1] : null;
-      const nextStatus = currentIndex < STATUS_ORDER.length - 1 ? STATUS_ORDER[currentIndex + 1] : null;
+        colContainer.innerHTML = colTasks.map(task => {
+          const overdue = UIHelper.isOverdue(task.due_date, task.status);
+          const projectName = task.project_name || 'Dự án';
 
-      colContainer.innerHTML = colTasks.map(task => {
-        const overdue = UIHelper.isOverdue(task.due_date, task.status);
-        const projectName = projectMap[task.project_id] || 'Dự án';
-
-        return `
-          <div class="kanban-card" draggable="true" data-id="${task.id}">
-            <div class="kanban-card-top">
-              <span class="badge badge-${task.priority.toLowerCase()}">${task.priority}</span>
-              <span class="kanban-project-tag" title="${UIHelper.escapeHTML(projectName)}">${UIHelper.escapeHTML(projectName)}</span>
-            </div>
-            <div class="kanban-card-title">${UIHelper.escapeHTML(task.title)}</div>
-            <div class="kanban-card-footer">
-              <span class="${overdue ? 'text-danger' : ''}">
-                📅 ${task.due_date ? UIHelper.formatDate(task.due_date) : 'Không hạn'}
-              </span>
-              <div class="kanban-move-btns">
-                ${prevStatus ? `<button class="btn btn-ghost btn-sm move-btn" data-id="${task.id}" data-target="${prevStatus}" title="Lùi trạng thái">&larr;</button>` : ''}
-                ${nextStatus ? `<button class="btn btn-ghost btn-sm move-btn" data-id="${task.id}" data-target="${nextStatus}" title="Tiến trạng thái">&rarr;</button>` : ''}
-                <button class="btn btn-ghost btn-sm edit-kanban-btn" data-id="${task.id}" title="Sửa">✎</button>
-                <button class="btn btn-ghost btn-sm delete-kanban-btn" data-id="${task.id}" title="Xóa" style="color: var(--color-danger);">🗑</button>
+          return `
+            <div class="kanban-card" draggable="true" data-id="${task.id}">
+              <div class="kanban-card-top">
+                <span class="badge badge-${task.priority.toLowerCase()}">${task.priority}</span>
+                <span class="kanban-project-tag" title="${UIHelper.escapeHTML(projectName)}">${UIHelper.escapeHTML(projectName)}</span>
+              </div>
+              <div class="kanban-card-title">${UIHelper.escapeHTML(task.title)}</div>
+              <div class="kanban-card-footer">
+                <span class="${overdue ? 'text-danger' : ''}">
+                  📅 ${task.due_date ? UIHelper.formatDate(task.due_date) : 'Không hạn'}
+                </span>
+                <div class="kanban-move-btns">
+                  ${prevStatus ? `<button class="btn btn-ghost btn-sm move-btn" data-id="${task.id}" data-target="${prevStatus}" title="Lùi trạng thái">&larr;</button>` : ''}
+                  ${nextStatus ? `<button class="btn btn-ghost btn-sm move-btn" data-id="${task.id}" data-target="${nextStatus}" title="Tiến trạng thái">&rarr;</button>` : ''}
+                  <button class="btn btn-ghost btn-sm edit-kanban-btn" data-id="${task.id}" title="Sửa">✎</button>
+                  <button class="btn btn-ghost btn-sm delete-kanban-btn" data-id="${task.id}" title="Xóa" style="color: var(--color-danger);">🗑</button>
+                </div>
               </div>
             </div>
-          </div>
-        `;
-      }).join('');
-    });
+          `;
+        }).join('');
+      });
 
-    attachCardEvents(allTasks);
+      attachCardEvents();
+    } catch (err) {
+      UIHelper.showToast(err.message, 'error');
+    }
   }
 
-  function attachCardEvents(allTasks) {
-    // 1. Chuyển cột bằng nút bấm <- / ->
+  function attachCardEvents() {
     document.querySelectorAll('.move-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        StorageService.updateTaskStatus(btn.dataset.id, currentUser.id, btn.dataset.target);
-        renderKanbanBoard();
+      btn.addEventListener('click', async () => {
+        try {
+          await ApiService.updateTaskStatus(btn.dataset.id, btn.dataset.target);
+          await renderKanbanBoard();
+        } catch (err) {
+          UIHelper.showToast(err.message, 'error');
+        }
       });
     });
 
-    // 2. Sửa & Xóa thẻ
     document.querySelectorAll('.edit-kanban-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const task = allTasks.find(t => t.id === Number(btn.dataset.id));
+        const task = cachedTasks.find(t => t.id === Number(btn.dataset.id));
         if (task) openTaskModal(task);
       });
     });
@@ -161,7 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // 3. Kéo thả (HTML5 Drag & Drop) trên từng thẻ
     document.querySelectorAll('.kanban-card').forEach(card => {
       card.addEventListener('dragstart', () => {
         draggedTaskId = card.dataset.id;
@@ -175,10 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Gắn sự kiện thả (Drop Zone) cho 4 cột Kanban
   document.querySelectorAll('.kanban-column').forEach(column => {
     column.addEventListener('dragover', (e) => {
-      e.preventDefault(); // Cho phép thả thẻ vào cột này
+      e.preventDefault();
       column.classList.add('drag-over');
     });
 
@@ -186,15 +187,19 @@ document.addEventListener('DOMContentLoaded', () => {
       column.classList.remove('drag-over');
     });
 
-    column.addEventListener('drop', (e) => {
+    column.addEventListener('drop', async (e) => {
       e.preventDefault();
       column.classList.remove('drag-over');
       const newStatus = column.dataset.status;
 
       if (draggedTaskId && newStatus) {
-        StorageService.updateTaskStatus(draggedTaskId, currentUser.id, newStatus);
-        UIHelper.showToast(`Đã chuyển sang cột ${newStatus}`);
-        renderKanbanBoard();
+        try {
+          await ApiService.updateTaskStatus(draggedTaskId, newStatus);
+          UIHelper.showToast(`Đã lưu trạng thái ${newStatus} vào Database`);
+          await renderKanbanBoard();
+        } catch (err) {
+          UIHelper.showToast(err.message, 'error');
+        }
       }
     });
   });
@@ -206,13 +211,14 @@ document.addEventListener('DOMContentLoaded', () => {
   projectFilter.addEventListener('change', renderKanbanBoard);
   searchInput.addEventListener('input', renderKanbanBoard);
 
-  taskForm.addEventListener('submit', (e) => {
+  taskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = taskTitleInput.value.trim();
     if (!title) return UIHelper.showToast('Vui lòng nhập tiêu đề công việc', 'error');
 
+    const submitBtn = taskForm.querySelector('button[type="submit"]');
     const payload = {
-      project_id: taskProjectSelect.value,
+      project_id: Number(taskProjectSelect.value),
       title,
       description: taskDescInput.value,
       priority: taskPriorityInput.value,
@@ -220,33 +226,48 @@ document.addEventListener('DOMContentLoaded', () => {
       due_date: taskDueDateInput.value
     };
 
-    const id = taskIdInput.value;
-    if (id) {
-      StorageService.updateTask(id, currentUser.id, payload);
-      UIHelper.showToast('Đã cập nhật công việc!');
-    } else {
-      StorageService.createTask(currentUser.id, payload);
-      UIHelper.showToast('Đã thêm công việc mới!');
-    }
+    try {
+      submitBtn.disabled = true;
+      const id = taskIdInput.value;
+      if (id) {
+        await ApiService.updateTask(id, payload);
+        UIHelper.showToast('Đã cập nhật công việc!');
+      } else {
+        await ApiService.createTask(payload);
+        UIHelper.showToast('Đã thêm công việc mới!');
+      }
 
-    closeTaskModal();
-    renderKanbanBoard();
+      closeTaskModal();
+      await renderKanbanBoard();
+    } catch (err) {
+      UIHelper.showToast(err.message, 'error');
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
 
   document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
     deleteModal.classList.remove('active');
   });
 
-  document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
-    if (taskToDeleteId) {
-      StorageService.deleteTask(taskToDeleteId, currentUser.id);
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    if (!taskToDeleteId) return;
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    try {
+      confirmBtn.disabled = true;
+      await ApiService.deleteTask(taskToDeleteId);
       UIHelper.showToast('Đã xóa công việc.');
       taskToDeleteId = null;
       deleteModal.classList.remove('active');
-      renderKanbanBoard();
+      await renderKanbanBoard();
+    } catch (err) {
+      UIHelper.showToast(err.message, 'error');
+    } finally {
+      confirmBtn.disabled = false;
     }
   });
 
-  populateProjectDropdowns();
-  renderKanbanBoard();
+  // Khởi chạy dữ liệu ban đầu
+  populateProjectDropdowns().then(() => renderKanbanBoard());
 });

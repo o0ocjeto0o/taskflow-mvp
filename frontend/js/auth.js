@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Nếu đã đăng nhập rồi thì không cần vào lại trang Login/Register
   UIHelper.redirectIfAuthenticated();
 
   const errorBox = document.getElementById('authError');
@@ -16,7 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. XỬ LÝ FORM ĐĂNG KÝ
   const registerForm = document.getElementById('registerForm');
   if (registerForm) {
-    registerForm.addEventListener('submit', (e) => {
+    const submitBtn = document.getElementById('registerSubmitBtn');
+
+    registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorBox.classList.add('hidden');
 
@@ -31,10 +32,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (password !== confirmPassword) return showError('Mật khẩu xác nhận không khớp.');
 
       try {
-        StorageService.registerUser({ name, email, password });
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang tạo tài khoản...';
+
+        await ApiService.register({ name, email, password });
         window.location.href = 'dashboard.html';
       } catch (err) {
         showError(err.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Đăng ký';
       }
     });
   }
@@ -42,7 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. XỬ LÝ FORM ĐĂNG NHẬP
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
+    const submitBtn = document.getElementById('loginSubmitBtn');
+
+    loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorBox.classList.add('hidden');
 
@@ -54,10 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        StorageService.loginUser({ email, password });
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang đăng nhập...';
+
+        await ApiService.login({ email, password });
         window.location.href = 'dashboard.html';
       } catch (err) {
         showError(err.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Đăng nhập';
       }
     });
   }

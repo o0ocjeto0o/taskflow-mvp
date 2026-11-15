@@ -52,11 +52,12 @@
     </section>
   </main>
 
-  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
   <script>
     // Nếu người dùng đã đăng nhập, đổi nút điều hướng sang Dashboard
-    const currentUser = StorageService.getCurrentUser();
-    if (currentUser) {
+    const currentUser = ApiService.getCurrentUser();
+    const token = ApiService.getToken();
+    if (currentUser && token) {
       document.getElementById('landingAuthActions').innerHTML =
         `<a href="dashboard.html" class="btn btn-primary">Vào Dashboard (${UIHelper.escapeHTML(currentUser.name)})</a>`;
       const heroBtn = document.getElementById('heroCtaBtn');
