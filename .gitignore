@@ -1,6 +1,15 @@
+# Thư viện Node.js
 node_modules/
+
+# Biến môi trường nhạy cảm
 .env
+backend/.env
+
+# Dữ liệu Database cục bộ
 *.sqlite
 *.sqlite3
+*.db
+
+# File hệ thống
 .DS_Store
 Thumbs.db

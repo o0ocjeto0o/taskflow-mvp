@@ -2,7 +2,11 @@
  * ApiService: Tầng giao tiếp RESTful API giữa Frontend và Backend (Phase 8)
  */
 const ApiService = {
-  BASE_URL: 'http://localhost:3000/api',
+  // Tự động chọn URL phù hợp: Live Server (5500) -> localhost:3000 | Production/Express -> '/api'
+  BASE_URL: (window.location.port === '5500' || window.location.protocol === 'file:')
+    ? 'http://localhost:3000/api'
+    : '/api',
+
   KEYS: {
     TOKEN: 'taskflow_token',
     USER: 'taskflow_user'

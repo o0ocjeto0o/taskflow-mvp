@@ -2,8 +2,15 @@ const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'taskflow.sqlite');
+// Ưu tiên lấy đường dẫn Database từ biến môi trường DB_PATH (khi deploy), mặc định lưu tại thư mục database/
+const dbPath = process.env.DB_PATH
+  ? path.resolve(process.env.DB_PATH)
+  : path.join(__dirname, 'taskflow.sqlite');
+
 const initSqlPath = path.join(__dirname, 'init.sql');
+
+// Đảm bảo thư mục chứa file SQLite luôn tồn tại trước khi mở kết nối
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
@@ -41,10 +48,8 @@ function dbAll(sql, params = []) {
 }
 
 async function initializeDatabase() {
-  // Bật kiểm tra khóa ngoại trên SQLite
   await dbRun('PRAGMA foreign_keys = ON;');
 
-  // Tạo các bảng từ kịch bản init.sql
   const initSql = fs.readFileSync(initSqlPath, 'utf8');
   await new Promise((resolve, reject) => {
     db.exec(initSql, (err) => {

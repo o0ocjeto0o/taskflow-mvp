@@ -1,0 +1,12 @@
+{
+  "name": "taskflow",
+  "version": "1.0.0",
+  "description": "TaskFlow - Full-stack Project & Task Management Web Application",
+  "scripts": {
+    "build": "npm install --prefix backend",
+    "start": "node backend/server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
