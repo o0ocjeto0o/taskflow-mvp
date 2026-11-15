@@ -1,19 +1,16 @@
 const { dbGet } = require('../database/db');
 
-const DEFAULT_USER_ID = 1;
-
 // GET /api/dashboard/stats
 const getDashboardStats = async (req, res) => {
   try {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const userId = req.user.id;
+    const today = new Date().toISOString().slice(0, 10);
 
-    // 1. Đếm tổng số dự án của user
     const projectRow = await dbGet(
       'SELECT COUNT(*) AS totalProjects FROM projects WHERE user_id = ?',
-      [DEFAULT_USER_ID]
+      [userId]
     );
 
-    // 2. Thống kê các chỉ số công việc bằng SQL
     const taskStats = await dbGet(
       `SELECT
         COUNT(tasks.id) AS totalTasks,
@@ -23,7 +20,7 @@ const getDashboardStats = async (req, res) => {
        FROM tasks
        INNER JOIN projects ON tasks.project_id = projects.id
        WHERE projects.user_id = ?`,
-      [today, DEFAULT_USER_ID]
+      [today, userId]
     );
 
     const totalProjects = projectRow.totalProjects || 0;

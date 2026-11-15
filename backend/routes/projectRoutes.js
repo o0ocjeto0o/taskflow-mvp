@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const projectController = require('../controllers/projectController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Áp dụng authMiddleware cho TẤT CẢ các API bên dưới
+router.use(authMiddleware);
 
 router.get('/', projectController.getAllProjects);
 router.post('/', projectController.createProject);

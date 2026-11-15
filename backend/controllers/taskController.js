@@ -2,21 +2,20 @@ const { dbRun, dbGet, dbAll } = require('../database/db');
 
 const VALID_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
 const VALID_STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
-const DEFAULT_USER_ID = 1;
 
-// 1. GET /api/tasks - Lấy danh sách công việc kèm lọc & tìm kiếm bằng SQL
+// 1. GET /api/tasks
 const getAllTasks = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { search, status, priority, projectId } = req.query;
 
-    // Dùng INNER JOIN với bảng projects để chỉ lấy task thuộc các dự án của user hiện tại
     let sql = `
       SELECT tasks.*, projects.name AS project_name
       FROM tasks
       INNER JOIN projects ON tasks.project_id = projects.id
       WHERE projects.user_id = ?
     `;
-    const params = [DEFAULT_USER_ID];
+    const params = [userId];
 
     if (projectId && projectId !== 'ALL') {
       sql += ' AND tasks.project_id = ?';
@@ -53,24 +52,25 @@ const getAllTasks = async (req, res) => {
   }
 };
 
-// 2. POST /api/tasks - Thêm công việc mới vào SQLite
+// 2. POST /api/tasks
 const createTask = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { project_id, title, description, priority, status, due_date } = req.body;
 
     if (!project_id) {
       return res.status(400).json({ success: false, message: 'Thiếu mã dự án (project_id).' });
     }
 
-    // Kiểm tra dự án có tồn tại và thuộc về user hiện tại hay không
+    // Chỉ cho phép thêm task vào dự án thuộc quyền sở hữu của user đang đăng nhập
     const project = await dbGet(
       'SELECT id FROM projects WHERE id = ? AND user_id = ?',
-      [Number(project_id), DEFAULT_USER_ID]
+      [Number(project_id), userId]
     );
     if (!project) {
-      return res.status(404).json({
+      return res.status(403).json({
         success: false,
-        message: `Không tìm thấy dự án có ID = ${project_id} để gắn công việc.`
+        message: 'Dự án không tồn tại hoặc bạn không có quyền thêm công việc vào dự án này.'
       });
     }
 
@@ -123,23 +123,23 @@ const createTask = async (req, res) => {
   }
 };
 
-// 3. PUT /api/tasks/:id - Cập nhật thông tin công việc
+// 3. PUT /api/tasks/:id
 const updateTask = async (req, res) => {
   try {
+    const userId = req.user.id;
     const taskId = Number(req.params.id);
 
-    // Kiểm tra task tồn tại và thuộc dự án của user hiện tại
     const existing = await dbGet(
       `SELECT tasks.* FROM tasks
        INNER JOIN projects ON tasks.project_id = projects.id
        WHERE tasks.id = ? AND projects.user_id = ?`,
-      [taskId, DEFAULT_USER_ID]
+      [taskId, userId]
     );
 
     if (!existing) {
       return res.status(404).json({
         success: false,
-        message: `Không tìm thấy công việc có ID = ${taskId}`
+        message: 'Không tìm thấy công việc hoặc bạn không có quyền chỉnh sửa.'
       });
     }
 
@@ -160,12 +160,27 @@ const updateTask = async (req, res) => {
       return res.status(400).json({ success: false, message: `Trạng thái không hợp lệ: ${status}` });
     }
 
+    // Nếu đổi sang dự án khác, kiểm tra dự án mới cũng phải thuộc về user hiện tại
+    const targetProjectId = project_id ? Number(project_id) : existing.project_id;
+    if (targetProjectId !== existing.project_id) {
+      const targetProject = await dbGet(
+        'SELECT id FROM projects WHERE id = ? AND user_id = ?',
+        [targetProjectId, userId]
+      );
+      if (!targetProject) {
+        return res.status(403).json({
+          success: false,
+          message: 'Bạn không có quyền chuyển công việc sang dự án này.'
+        });
+      }
+    }
+
     await dbRun(
       `UPDATE tasks
        SET project_id = ?, title = ?, description = ?, priority = ?, status = ?, due_date = ?
        WHERE id = ?`,
       [
-        project_id ? Number(project_id) : existing.project_id,
+        targetProjectId,
         title.trim(),
         description !== undefined ? description.trim() : existing.description,
         priority || existing.priority,
@@ -188,9 +203,10 @@ const updateTask = async (req, res) => {
   }
 };
 
-// 4. PATCH /api/tasks/:id/status - Đổi trạng thái trên Kanban Board
+// 4. PATCH /api/tasks/:id/status
 const updateTaskStatus = async (req, res) => {
   try {
+    const userId = req.user.id;
     const taskId = Number(req.params.id);
     const { status } = req.body;
 
@@ -205,13 +221,13 @@ const updateTaskStatus = async (req, res) => {
       `SELECT tasks.id FROM tasks
        INNER JOIN projects ON tasks.project_id = projects.id
        WHERE tasks.id = ? AND projects.user_id = ?`,
-      [taskId, DEFAULT_USER_ID]
+      [taskId, userId]
     );
 
     if (!existing) {
       return res.status(404).json({
         success: false,
-        message: `Không tìm thấy công việc có ID = ${taskId}`
+        message: 'Không tìm thấy công việc hoặc bạn không có quyền cập nhật.'
       });
     }
 
@@ -229,22 +245,23 @@ const updateTaskStatus = async (req, res) => {
   }
 };
 
-// 5. DELETE /api/tasks/:id - Xóa công việc
+// 5. DELETE /api/tasks/:id
 const deleteTask = async (req, res) => {
   try {
+    const userId = req.user.id;
     const taskId = Number(req.params.id);
 
     const existing = await dbGet(
       `SELECT tasks.id FROM tasks
        INNER JOIN projects ON tasks.project_id = projects.id
        WHERE tasks.id = ? AND projects.user_id = ?`,
-      [taskId, DEFAULT_USER_ID]
+      [taskId, userId]
     );
 
     if (!existing) {
       return res.status(404).json({
         success: false,
-        message: `Không tìm thấy công việc có ID = ${taskId}`
+        message: 'Không tìm thấy công việc hoặc bạn không có quyền xóa.'
       });
     }
 

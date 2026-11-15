@@ -1,14 +1,14 @@
 const { dbRun, dbGet, dbAll } = require('../database/db');
 
 const VALID_PROJECT_STATUSES = ['ACTIVE', 'COMPLETED', 'ARCHIVED'];
-const DEFAULT_USER_ID = 1; // Sẽ thay bằng req.user.id ở Phase 7
 
-// 1. GET /api/projects - Lấy danh sách dự án từ SQLite
+// 1. GET /api/projects
 const getAllProjects = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { search, status } = req.query;
     let sql = 'SELECT * FROM projects WHERE user_id = ?';
-    const params = [DEFAULT_USER_ID];
+    const params = [userId];
 
     if (status && status !== 'ALL') {
       sql += ' AND status = ?';
@@ -35,19 +35,20 @@ const getAllProjects = async (req, res) => {
   }
 };
 
-// 2. GET /api/projects/:id - Lấy chi tiết 1 dự án kèm các task thuộc dự án đó
+// 2. GET /api/projects/:id
 const getProjectById = async (req, res) => {
   try {
+    const userId = req.user.id;
     const projectId = Number(req.params.id);
     const project = await dbGet(
       'SELECT * FROM projects WHERE id = ? AND user_id = ?',
-      [projectId, DEFAULT_USER_ID]
+      [projectId, userId]
     );
 
     if (!project) {
       return res.status(404).json({
         success: false,
-        message: `Không tìm thấy dự án có ID = ${projectId}`
+        message: 'Không tìm thấy dự án hoặc bạn không có quyền truy cập.'
       });
     }
 
@@ -69,9 +70,10 @@ const getProjectById = async (req, res) => {
   }
 };
 
-// 3. POST /api/projects - Thêm dự án mới vào SQLite
+// 3. POST /api/projects
 const createProject = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { name, description, start_date, end_date, status } = req.body;
 
     if (!name || !name.trim()) {
@@ -93,7 +95,7 @@ const createProject = async (req, res) => {
       `INSERT INTO projects (user_id, name, description, start_date, end_date, status)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        DEFAULT_USER_ID,
+        userId,
         name.trim(),
         description ? description.trim() : '',
         start_date || '',
@@ -102,7 +104,6 @@ const createProject = async (req, res) => {
       ]
     );
 
-    // Truy vấn lại bản ghi vừa tạo để trả đầy đủ dữ liệu (bao gồm created_at) về Client
     const newProject = await dbGet('SELECT * FROM projects WHERE id = ?', [result.lastID]);
 
     res.status(201).json({
@@ -116,19 +117,20 @@ const createProject = async (req, res) => {
   }
 };
 
-// 4. PUT /api/projects/:id - Cập nhật dự án trong SQLite
+// 4. PUT /api/projects/:id
 const updateProject = async (req, res) => {
   try {
+    const userId = req.user.id;
     const projectId = Number(req.params.id);
     const existing = await dbGet(
       'SELECT * FROM projects WHERE id = ? AND user_id = ?',
-      [projectId, DEFAULT_USER_ID]
+      [projectId, userId]
     );
 
     if (!existing) {
       return res.status(404).json({
         success: false,
-        message: `Không tìm thấy dự án có ID = ${projectId}`
+        message: 'Không tìm thấy dự án hoặc bạn không có quyền chỉnh sửa.'
       });
     }
 
@@ -159,7 +161,7 @@ const updateProject = async (req, res) => {
         end_date !== undefined ? end_date : existing.end_date,
         status || existing.status,
         projectId,
-        DEFAULT_USER_ID
+        userId
       ]
     );
 
@@ -176,19 +178,20 @@ const updateProject = async (req, res) => {
   }
 };
 
-// 5. DELETE /api/projects/:id - Xóa dự án (SQLite tự động xóa các task con nhờ ON DELETE CASCADE)
+// 5. DELETE /api/projects/:id
 const deleteProject = async (req, res) => {
   try {
+    const userId = req.user.id;
     const projectId = Number(req.params.id);
     const result = await dbRun(
       'DELETE FROM projects WHERE id = ? AND user_id = ?',
-      [projectId, DEFAULT_USER_ID]
+      [projectId, userId]
     );
 
     if (result.changes === 0) {
       return res.status(404).json({
         success: false,
-        message: `Không tìm thấy dự án có ID = ${projectId}`
+        message: 'Không tìm thấy dự án hoặc bạn không có quyền xóa.'
       });
     }
 
