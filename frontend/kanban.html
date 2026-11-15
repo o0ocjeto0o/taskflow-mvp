@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban Board – TaskFlow</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <div id="kanbanPage" class="app-container">
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <a href="dashboard.html" class="brand-logo">
+          <span class="brand-icon">T</span>
+          <span>TaskFlow</span>
+        </a>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">📊 Dashboard</a>
+        <a href="projects.html" class="nav-item">📁 Dự án</a>
+        <a href="kanban.html" class="nav-item active">📋 Kanban Board</a>
+        <a href="profile.html" class="nav-item">👤 Hồ sơ cá nhân</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="btn btn-secondary btn-full">🚪 Đăng xuất</button>
+      </div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="top-header">
+        <div class="header-left">
+          <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
+          <h1 class="page-title">Kanban Board</h1>
+        </div>
+        <div class="header-right">
+          <a href="profile.html" class="user-chip">
+            <span id="headerUserName">User</span>
+            <div id="headerUserAvatar" class="avatar">U</div>
+          </a>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div class="toolbar">
+          <div class="toolbar-filters">
+            <select id="kanbanProjectFilter" class="form-control">
+              <option value="ALL">Tất cả dự án</option>
+            </select>
+            <input type="text" id="kanbanSearchInput" class="form-control" placeholder="Tìm nhanh thẻ công việc...">
+          </div>
+          <button id="openKanbanCreateTaskBtn" class="btn btn-primary">+ Thêm công việc</button>
+        </div>
+
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+          💡 Mẹo: Bạn có thể <strong>kéo thả thẻ (Drag &amp; Drop)</strong> giữa các cột hoặc dùng nút <strong>&larr; / &rarr;</strong> trên thẻ để cập nhật trạng thái.
+        </p>
+
+        <!-- BẢNG KANBAN 4 CỘT -->
+        <section class="kanban-board">
+          <div class="kanban-column" data-status="TODO">
+            <div class="kanban-column-header">
+              <span>📌 TODO</span>
+              <span class="kanban-count" id="count-TODO">0</span>
+            </div>
+            <div class="kanban-cards" id="col-TODO"></div>
+          </div>
+
+          <div class="kanban-column" data-status="IN_PROGRESS">
+            <div class="kanban-column-header">
+              <span style="color: var(--color-info);">⚡ IN PROGRESS</span>
+              <span class="kanban-count" id="count-IN_PROGRESS">0</span>
+            </div>
+            <div class="kanban-cards" id="col-IN_PROGRESS"></div>
+          </div>
+
+          <div class="kanban-column" data-status="IN_REVIEW">
+            <div class="kanban-column-header">
+              <span style="color: #D97706;">🔍 IN REVIEW</span>
+              <span class="kanban-count" id="count-IN_REVIEW">0</span>
+            </div>
+            <div class="kanban-cards" id="col-IN_REVIEW"></div>
+          </div>
+
+          <div class="kanban-column" data-status="DONE">
+            <div class="kanban-column-header">
+              <span style="color: var(--color-success);">✅ DONE</span>
+              <span class="kanban-count" id="count-DONE">0</span>
+            </div>
+            <div class="kanban-cards" id="col-DONE"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL TẠO / SỬA CÔNG VIỆC TRÊN KANBAN -->
+  <div id="taskModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="taskModalTitle" class="modal-title">Thêm công việc mới</h3>
+        <button type="button" id="closeTaskModalBtn" class="modal-close">&times;</button>
+      </div>
+      <form id="taskForm">
+        <div class="modal-body">
+          <input type="hidden" id="taskIdInput">
+          <div class="form-group">
+            <label class="form-label" for="taskProjectSelect">Thuộc dự án <span class="required">*</span></label>
+            <select id="taskProjectSelect" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="taskTitleInput">Tiêu đề công việc <span class="required">*</span></label>
+            <input type="text" id="taskTitleInput" class="form-control" placeholder="Nhập tên công việc..." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="taskDescInput">Mô tả chi tiết</label>
+            <textarea id="taskDescInput" class="form-control"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="taskPriorityInput">Mức độ ưu tiên</label>
+              <select id="taskPriorityInput" class="form-control">
+                <option value="LOW">LOW (Thấp)</option>
+                <option value="MEDIUM" selected>MEDIUM (Trung bình)</option>
+                <option value="HIGH">HIGH (Cao)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="taskStatusInput">Trạng thái</label>
+              <select id="taskStatusInput" class="form-control">
+                <option value="TODO">TODO</option>
+                <option value="IN_PROGRESS">IN PROGRESS</option>
+                <option value="IN_REVIEW">IN REVIEW</option>
+                <option value="DONE">DONE</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="taskDueDateInput">Hạn chót (Due Date)</label>
+            <input type="date" id="taskDueDateInput" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelTaskModalBtn" class="btn btn-secondary">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu công việc</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL XÁC NHẬN XÓA -->
+  <div id="deleteModal" class="modal-backdrop">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title">Xác nhận xóa</h3>
+      </div>
+      <div class="modal-body">
+        <p id="deleteModalMessage">Bạn có chắc chắn muốn xóa công việc này?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="cancelDeleteBtn" class="btn btn-secondary">Hủy</button>
+        <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Xác nhận xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="js/storage.js"></script>
+  <script src="js/kanban.js"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow – Quản lý Dự án & Công việc Tinh gọn</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body class="landing-page">
+  <header class="landing-nav">
+    <a href="index.html" class="brand-logo">
+      <span class="brand-icon">T</span>
+      <span>TaskFlow</span>
+    </a>
+    <div class="landing-nav-actions" id="landingAuthActions">
+      <a href="login.html" class="btn btn-secondary">Đăng nhập</a>
+      <a href="register.html" class="btn btn-primary">Đăng ký miễn phí</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero-section">
+      <span class="hero-badge">Phiên bản MVP 1.0 – Dành cho Sinh viên & Freelancer</span>
+      <h1 class="hero-title">Tổ chức dự án rõ ràng, hoàn thành công việc đúng hạn.</h1>
+      <p class="hero-subtitle">
+        TaskFlow giúp bạn chia nhỏ mục tiêu thành từng công việc cụ thể, theo dõi tiến độ trực quan qua bảng Kanban và nắm bắt hiệu suất qua Dashboard tự động.
+      </p>
+      <a href="register.html" id="heroCtaBtn" class="btn btn-primary" style="padding: 12px 28px; font-size: 16px;">
+        Bắt đầu ngay miễn phí &rarr;
+      </a>
+    </section>
+
+    <section class="features-section">
+      <div class="feature-card">
+        <div class="feature-icon">📁</div>
+        <h3 class="feature-title">Quản lý Dự án Tập trung</h3>
+        <p style="color: var(--text-secondary);">Tách biệt từng đồ án môn học, dự án cá nhân hoặc công việc khách hàng với thời gian và tiến độ rõ ràng.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h3 class="feature-title">Bảng Kanban Trực quan</h3>
+        <p style="color: var(--text-secondary);">Dễ dàng theo dõi và chuyển đổi trạng thái công việc qua 4 cột: TODO, IN PROGRESS, IN REVIEW và DONE.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3 class="feature-title">Dashboard Thống kê Động</h3>
+        <p style="color: var(--text-secondary);">Tự động tính toán phần trăm hoàn thành, cảnh báo công việc quá hạn theo dữ liệu thực tế của bạn.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/storage.js"></script>
+  <script>
+    // Nếu người dùng đã đăng nhập, đổi nút điều hướng sang Dashboard
+    const currentUser = StorageService.getCurrentUser();
+    if (currentUser) {
+      document.getElementById('landingAuthActions').innerHTML =
+        `<a href="dashboard.html" class="btn btn-primary">Vào Dashboard (${UIHelper.escapeHTML(currentUser.name)})</a>`;
+      const heroBtn = document.getElementById('heroCtaBtn');
+      heroBtn.href = 'dashboard.html';
+      heroBtn.textContent = 'Đi tới Không gian làm việc →';
+    }
+  </script>
+</body>
+</html>

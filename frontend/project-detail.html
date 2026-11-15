@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi tiết Dự án – TaskFlow</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <div id="projectDetailPage" class="app-container">
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <a href="dashboard.html" class="brand-logo">
+          <span class="brand-icon">T</span>
+          <span>TaskFlow</span>
+        </a>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">📊 Dashboard</a>
+        <a href="projects.html" class="nav-item active">📁 Dự án</a>
+        <a href="kanban.html" class="nav-item">📋 Kanban Board</a>
+        <a href="profile.html" class="nav-item">👤 Hồ sơ cá nhân</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="btn btn-secondary btn-full">🚪 Đăng xuất</button>
+      </div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="top-header">
+        <div class="header-left">
+          <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
+          <h1 class="page-title"><a href="projects.html" style="color: var(--text-secondary);">Dự án</a> / Chi tiết</h1>
+        </div>
+        <div class="header-right">
+          <a href="profile.html" class="user-chip">
+            <span id="headerUserName">User</span>
+            <div id="headerUserAvatar" class="avatar">U</div>
+          </a>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <!-- ERROR STATE NẾU KHÔNG TÌM THẤY DỰ ÁN -->
+        <div id="projectDetailError" class="error-state hidden">
+          <h3 style="margin-bottom: 8px;">Không tìm thấy dự án</h3>
+          <p style="margin-bottom: 16px;">Dự án không tồn tại hoặc bạn không có quyền truy cập.</p>
+          <a href="projects.html" class="btn btn-primary">Quay lại Danh sách dự án</a>
+        </div>
+
+        <!-- NỘI DUNG CHI TIẾT DỰ ÁN -->
+        <div id="projectDetailContent" class="hidden">
+          <section class="project-banner">
+            <div class="project-banner-header">
+              <div>
+                <h2 class="project-banner-title">
+                  <span id="detailProjectName">Tên dự án</span>
+                  <span id="detailProjectStatus" class="badge badge-active">ACTIVE</span>
+                </h2>
+                <p id="detailProjectDesc" style="color: var(--text-secondary); margin-top: 8px;"></p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <a id="openProjectKanbanLink" href="kanban.html" class="btn btn-secondary btn-sm">📋 Xem trên Kanban</a>
+                <button id="editCurrentProjectBtn" class="btn btn-secondary btn-sm">✎ Sửa dự án</button>
+              </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-top: 16px;">
+              <span id="detailProjectDates" style="font-size: 13px; color: var(--text-secondary);"></span>
+              <div style="min-width: 220px; flex: 1; max-width: 320px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px;">
+                  <span>Tiến độ công việc</span>
+                  <span id="detailProjectProgressText">0%</span>
+                </div>
+                <div class="progress-bar">
+                  <div id="detailProjectProgressBar" class="progress-fill" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- THANH TÌM KIẾM & LỌC TASK -->
+          <div class="toolbar">
+            <div class="toolbar-filters">
+              <input type="text" id="taskSearchInput" class="form-control" placeholder="Tìm kiếm công việc...">
+              <select id="taskStatusFilter" class="form-control">
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="TODO">TODO</option>
+                <option value="IN_PROGRESS">IN PROGRESS</option>
+                <option value="IN_REVIEW">IN REVIEW</option>
+                <option value="DONE">DONE</option>
+              </select>
+              <select id="taskPriorityFilter" class="form-control">
+                <option value="ALL">Tất cả mức ưu tiên</option>
+                <option value="HIGH">HIGH (Cao)</option>
+                <option value="MEDIUM">MEDIUM (Trung bình)</option>
+                <option value="LOW">LOW (Thấp)</option>
+              </select>
+            </div>
+            <button id="openCreateTaskBtn" class="btn btn-primary">+ Thêm công việc</button>
+          </div>
+
+          <!-- DANH SÁCH CÔNG VIỆC -->
+          <div id="projectTasksContainer"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL SỬA DỰ ÁN -->
+  <div id="projectModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="projectModalTitle" class="modal-title">Chỉnh sửa dự án</h3>
+        <button type="button" id="closeProjectModalBtn" class="modal-close">&times;</button>
+      </div>
+      <form id="projectForm">
+        <div class="modal-body">
+          <input type="hidden" id="projectIdInput">
+          <div class="form-group">
+            <label class="form-label" for="projectNameInput">Tên dự án <span class="required">*</span></label>
+            <input type="text" id="projectNameInput" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="projectDescInput">Mô tả mục tiêu</label>
+            <textarea id="projectDescInput" class="form-control"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="projectStartInput">Ngày bắt đầu</label>
+              <input type="date" id="projectStartInput" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="projectEndInput">Ngày kết thúc</label>
+              <input type="date" id="projectEndInput" class="form-control">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="projectStatusInput">Trạng thái</label>
+            <select id="projectStatusInput" class="form-control">
+              <option value="ACTIVE">ACTIVE (Đang hoạt động)</option>
+              <option value="COMPLETED">COMPLETED (Hoàn thành)</option>
+              <option value="ARCHIVED">ARCHIVED (Lưu trữ)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelProjectModalBtn" class="btn btn-secondary">Hủy</button>
+          <button type="submit" class="btn btn-primary">Cập nhật dự án</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL TẠO / SỬA CÔNG VIỆC -->
+  <div id="taskModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="taskModalTitle" class="modal-title">Thêm công việc mới</h3>
+        <button type="button" id="closeTaskModalBtn" class="modal-close">&times;</button>
+      </div>
+      <form id="taskForm">
+        <div class="modal-body">
+          <input type="hidden" id="taskIdInput">
+          <div class="form-group">
+            <label class="form-label" for="taskTitleInput">Tiêu đề công việc <span class="required">*</span></label>
+            <input type="text" id="taskTitleInput" class="form-control" placeholder="Ví dụ: Thiết kế giao diện trang Login" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="taskDescInput">Mô tả chi tiết</label>
+            <textarea id="taskDescInput" class="form-control" placeholder="Ghi chú yêu cầu công việc..."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="taskPriorityInput">Mức độ ưu tiên</label>
+              <select id="taskPriorityInput" class="form-control">
+                <option value="LOW">LOW (Thấp)</option>
+                <option value="MEDIUM" selected>MEDIUM (Trung bình)</option>
+                <option value="HIGH">HIGH (Cao)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="taskStatusInput">Trạng thái</label>
+              <select id="taskStatusInput" class="form-control">
+                <option value="TODO">TODO</option>
+                <option value="IN_PROGRESS">IN PROGRESS</option>
+                <option value="IN_REVIEW">IN REVIEW</option>
+                <option value="DONE">DONE</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="taskDueDateInput">Hạn chót (Due Date)</label>
+            <input type="date" id="taskDueDateInput" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelTaskModalBtn" class="btn btn-secondary">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu công việc</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL XÁC NHẬN XÓA -->
+  <div id="deleteModal" class="modal-backdrop">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title">Xác nhận xóa</h3>
+      </div>
+      <div class="modal-body">
+        <p id="deleteModalMessage">Bạn có chắc chắn muốn xóa công việc này?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="cancelDeleteBtn" class="btn btn-secondary">Hủy</button>
+        <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Xác nhận xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="js/storage.js"></script>
+  <script src="js/projects.js"></script>
+  <script src="js/tasks.js"></script>
+</body>
+</html>

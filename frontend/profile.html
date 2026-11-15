@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hồ sơ cá nhân – TaskFlow</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <div id="profilePage" class="app-container">
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <a href="dashboard.html" class="brand-logo">
+          <span class="brand-icon">T</span>
+          <span>TaskFlow</span>
+        </a>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">📊 Dashboard</a>
+        <a href="projects.html" class="nav-item">📁 Dự án</a>
+        <a href="kanban.html" class="nav-item">📋 Kanban Board</a>
+        <a href="profile.html" class="nav-item active">👤 Hồ sơ cá nhân</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="btn btn-secondary btn-full">🚪 Đăng xuất</button>
+      </div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="top-header">
+        <div class="header-left">
+          <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
+          <h1 class="page-title">Hồ Sơ Cá Nhân</h1>
+        </div>
+        <div class="header-right">
+          <a href="profile.html" class="user-chip">
+            <span id="headerUserName">User</span>
+            <div id="headerUserAvatar" class="avatar">U</div>
+          </a>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div class="profile-grid">
+          <!-- KHỐI 1: THÔNG TIN TÀI KHOẢN -->
+          <div class="panel-card">
+            <div class="profile-header-box">
+              <div id="profileAvatarLarge" class="avatar-lg">U</div>
+              <div>
+                <h2 id="profileDisplayNameHeading" style="font-size: 18px; font-weight: 700;">Tên người dùng</h2>
+                <p id="profileJoinedDisplay" style="font-size: 13px; color: var(--text-secondary);">Ngày tham gia: --</p>
+              </div>
+            </div>
+
+            <form id="profileForm">
+              <div class="form-group">
+                <label class="form-label" for="profileEmailDisplay">Địa chỉ Email (Cố định)</label>
+                <input type="email" id="profileEmailDisplay" class="form-control" disabled>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="profileNameInput">Tên hiển thị <span class="required">*</span></label>
+                <input type="text" id="profileNameInput" class="form-control" required>
+              </div>
+              <button type="submit" class="btn btn-primary">Lưu thông tin</button>
+            </form>
+          </div>
+
+          <!-- KHỐI 2: ĐỔI MẬT KHẨU -->
+          <div class="panel-card">
+            <h2 class="panel-title" style="margin-bottom: 16px;">Đổi mật khẩu</h2>
+            <form id="passwordForm">
+              <div class="form-group">
+                <label class="form-label" for="oldPasswordInput">Mật khẩu hiện tại <span class="required">*</span></label>
+                <input type="password" id="oldPasswordInput" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="newPasswordInput">Mật khẩu mới (tối thiểu 6 ký tự) <span class="required">*</span></label>
+                <input type="password" id="newPasswordInput" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="confirmNewPasswordInput">Xác nhận mật khẩu mới <span class="required">*</span></label>
+                <input type="password" id="confirmNewPasswordInput" class="form-control" required>
+              </div>
+              <button type="submit" class="btn btn-primary">Cập nhật mật khẩu</button>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="js/storage.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>
